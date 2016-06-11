@@ -75,6 +75,9 @@
      "purge_url"
      "regsub"
      "regsuball"
+     "hash_data"
+     "synthetic"
+     "ban"
      )
     'font-lock-builtin-face)
 
@@ -94,6 +97,15 @@
      "vcl_pipe"
      "vcl_recv"
      "vcl_timeout"
+     "vcl_error"
+     ;; new as of varnish 4/5
+     "vcl_purge"
+     "vcl_synth"
+     "vcl_backend_fetch"
+     "vcl_backend_response"
+     "vcl_backend_error"
+     "vcl_init"
+     "vcl_fini"
      )
     'font-lock-function-name-face)
 
@@ -109,6 +121,14 @@
      "lookup"
      "pass"
      "pipe"
+     ;; new as of varnish 4/5
+     "purge"
+     "synth"
+     "restart"
+     "abandon"
+     "retry"
+     "ok"
+     "fail"
      )
     'font-lock-function-name-face)
 
@@ -139,11 +159,91 @@
      "resp.status"
      "beresp.ttl"
      "server.ip"
+     ;; new as of varnish 4/5
+     ;; hint: egrep ^[a-z] ./doc/sphinx/include/vcl_var.rs
+     "bereq"
+     "bereq.backend"
+     "bereq.between_bytes_timeout"
+     "bereq.connect_timeout"
+     "bereq.first_byte_timeout"
+     "bereq.method"
+     ;; "bereq.proto"
+     "bereq.retries"
+     "bereq.uncacheable"
+     ;; "bereq.url"
+     "bereq.xid"
+     "beresp"
+     "beresp.age"
+     "beresp.backend"
+     "beresp.backend.ip"
+     "beresp.backend.name"
+     "beresp.do_esi"
+     "beresp.do_gunzip"
+     "beresp.do_gzip"
+     "beresp.do_stream"
+     "beresp.grace"
+     ;; "beresp.http."
+     "beresp.keep"
+     "beresp.proto"
+     "beresp.reason"
+     "beresp.status"
+     "beresp.storage_hint"
+     ;; "beresp.ttl"
+     "beresp.uncacheable"
+     "beresp.was_304"
+     "client"
+     "client.identity"
+     ;; "client.ip"
+     "local"
+     "local.ip"
+     ;; "now"
+     "obj"
+     "obj.age"
+     "obj.grace"
+     "obj.hits"
+     ;; "obj.http."
+     "obj.keep"
+     ;; "obj.proto"
+     "obj.reason"
+     ;; "obj.status"
+     "obj.ttl"
+     "obj.uncacheable"
+     "remote"
+     "remote.ip"
+     "req"
+     "req.backend_hint"
+     "req.can_gzip"
+     "req.esi"
+     "req.esi_level"
+     "req.hash_always_miss"
+     "req.hash_ignore_busy"
+     ;; "req.http."
+     "req.method"
+     ;; "req.proto"
+     "req.restarts"
+     "req.ttl"
+     ;; "req.url"
+     "req.xid"
+     "req_top"
+     ;; "req_top.http."
+     "req_top.method"
+     "req_top.proto"
+     "req_top.url"
+     "resp"
+     ;; "resp.http."
+     "resp.is_streaming"
+     ;; "resp.proto"
+     "resp.reason"
+     ;; "resp.status"
+     "server"
+     "server.hostname"
+     "server.identity"
+     ;; "server.ip"
      )
     'font-lock-variable-name-face)
 
    ;; More variables
-   '("\\(bereq\\|beresp\\|req\\|resp\\|obj\\)\.http\.[A-Za-z-]+" .
+   '("\\(bereq\\|beresp\\|req\\|req_top\\|resp\\|obj\\)\.http\.[A-Za-z-]+\\|storage\.[A-Za-z0-9-]+\.\\(free_space\\|used_space\\|happy\\)" .
      font-lock-variable-name-face))
 
   ;; Filenames to highlight
