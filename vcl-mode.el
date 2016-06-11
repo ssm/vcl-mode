@@ -303,6 +303,8 @@
     (cond
      ;; Do not indent the first line.
      ((vcl-first-line-p) 0)
+     ;; neither empty lines
+     ((vcl-empty-line-p) 0)
      ;; Reduce indent level if we close a block on this line
      ((vcl-closing-tag-on-this-line-p)
       (- (vcl-previous-line-indentation)
@@ -311,9 +313,15 @@
      ((vcl-opening-tag-on-previous-line-p)
       (+ (vcl-previous-line-indentation)
 	 vcl-indent-level))
-     ;; By default, indent to the level of the previous non-empty line
+     ;; indent to the level of the previous non-empty line
+     ((or (vcl-previous-line-statement-end-p)
+	  (vcl-empty-previous-line-p)
+	  (vcl-comment-p))
+      (vcl-previous-line-indentation))
+     ;; line continuation
      (t
-      (vcl-previous-line-indentation)))))
+      (+ (vcl-previous-line-indentation)
+	 (floor (/ vcl-indent-level 2)))))))
 
 (defun vcl-opening-tag-on-previous-line-p ()
   "Checks if we have an opening tag on the previous line."
@@ -325,6 +333,17 @@
     (if (and (looking-at ".*{[ \t]*$")
              (not (vcl-comment-p)))
         t)))
+
+(defun vcl-previous-line-statement-end-p ()
+  "Checks if last line ended a statement"
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (skip-chars-backward " \t\n")
+    (beginning-of-line)
+    (or (looking-at ".*;[ \t]*$")
+	(looking-at ".*}C?[ \t]*$")
+	(vcl-comment-p))))
 
 (defun vcl-closing-tag-on-this-line-p ()
   "Checks if we have a closing tag on this line."
@@ -340,7 +359,9 @@
     (beginning-of-line)
     (skip-chars-backward " \t\n")
     (back-to-indentation)
-    (current-column)))
+    (- (current-column)
+       (mod (current-column)
+	    vcl-indent-level))))
 
 (defun vcl-comment-p ()
   "Checks if we have a commented line."
@@ -348,6 +369,22 @@
   (save-excursion
     (beginning-of-line)
     (looking-at "^[ \t]*#")))
+
+(defun vcl-empty-line-p ()
+  "Checks for empty line."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (looking-at "^[ \t]*$")))
+
+(defun vcl-empty-previous-line-p ()
+  "Checks for empty line."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (skip-chars-backward "\n")
+    (beginning-of-line)
+    (looking-at "^[ \t]*$")))
 
 (defun vcl-first-line-p ()
   "Checks if we are on the first line."
