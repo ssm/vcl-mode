@@ -300,23 +300,20 @@
   "Return the column to which the current line should be indented."
   (interactive)
   (save-excursion
-                                        ; Do not indent the first line.
-    (if (vcl-first-line-p) 0
-                                        ; Reduce indent level if we
-                                        ; close a block on this line
-      (if (vcl-closing-tag-on-this-line-p)
-          (- (vcl-previous-line-indentation)
-             vcl-indent-level)
-                                        ; Increase indent level if a
-                                        ; block opened on the previous
-                                        ; line
-        (if (vcl-opening-tag-on-previous-line-p)
-            (+ (vcl-previous-line-indentation)
-               vcl-indent-level)
-                                        ; By default, indent to the
-                                        ; level of the previous
-                                        ; non-empty line
-          (vcl-previous-line-indentation))))))
+    (cond
+     ;; Do not indent the first line.
+     ((vcl-first-line-p) 0)
+     ;; Reduce indent level if we close a block on this line
+     ((vcl-closing-tag-on-this-line-p)
+      (- (vcl-previous-line-indentation)
+	 vcl-indent-level))
+     ;; Increase indent level if a block opened on the previous line
+     ((vcl-opening-tag-on-previous-line-p)
+      (+ (vcl-previous-line-indentation)
+	 vcl-indent-level))
+     ;; By default, indent to the level of the previous non-empty line
+     (t
+      (vcl-previous-line-indentation)))))
 
 (defun vcl-opening-tag-on-previous-line-p ()
   "Checks if we have an opening tag on the previous line."
