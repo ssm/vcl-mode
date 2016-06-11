@@ -274,6 +274,11 @@
   (modify-syntax-entry ?# "<")
   (modify-syntax-entry ?\n ">")
 
+  ;; long strings - handling as comments for now
+  (modify-syntax-entry ?{ ". 1")
+  (modify-syntax-entry ?\" "\". 23b")
+  (modify-syntax-entry ?} ". 4")
+
   (run-hooks 'vcl-mode-hook)
   (set (make-local-variable 'indent-line-function) 'vcl-indent-line)
   (setq indent-tabs-mode vcl-indent-tabs-mode)
