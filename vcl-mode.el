@@ -62,10 +62,13 @@
     (list
      "else"
      "elsif"
+     "elseif"
      "if"
      "remove"
      "return"
+     "error"
      "set"
+     "unset"
      )
     'font-lock-keyword-face)
 
@@ -121,6 +124,7 @@
      "lookup"
      "pass"
      "pipe"
+     "hit_for_pass"
      ;; new as of varnish 4/5
      "purge"
      "synth"
@@ -151,6 +155,7 @@
      "obj.valid"
      "req.backend"
      "req.hash"
+     "req.grace"
      "req.proto"
      "req.request"
      "req.url"
@@ -158,6 +163,7 @@
      "resp.response"
      "resp.status"
      "beresp.ttl"
+     "beresp.saintmode"
      "server.ip"
      ;; new as of varnish 4/5
      ;; hint: egrep ^[a-z] ./doc/sphinx/include/vcl_var.rs
