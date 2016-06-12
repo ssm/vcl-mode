@@ -118,6 +118,7 @@
      "deliver"
      "discard"
      "error"
+     "miss"
      "fetch"
      "hash"
      "keep"
