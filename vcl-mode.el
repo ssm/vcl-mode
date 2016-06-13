@@ -349,8 +349,7 @@
     (beginning-of-line)
     (skip-chars-backward " \t\n")
     (beginning-of-line)
-    (or (looking-at ".*\\(;\\|}C?\\|\*/\\)[ \t]*$")
-	(vcl-comment-p (point)))))
+    (looking-at "^[ \t]*\\(#\\|//\\)\\|.*\\(;\\|}C?\\|\*/\\)[ \t]*$")))
 
 (defun vcl-closing-tag-on-this-line-p ()
   "Checks if we have a closing tag on this line."
