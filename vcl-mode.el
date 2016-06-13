@@ -62,10 +62,13 @@
     (list
      "else"
      "elsif"
+     "elseif"
      "if"
      "remove"
      "return"
+     "error"
      "set"
+     "unset"
      )
     'font-lock-keyword-face)
 
@@ -75,6 +78,9 @@
      "purge_url"
      "regsub"
      "regsuball"
+     "hash_data"
+     "synthetic"
+     "ban"
      )
     'font-lock-builtin-face)
 
@@ -94,6 +100,15 @@
      "vcl_pipe"
      "vcl_recv"
      "vcl_timeout"
+     "vcl_error"
+     ;; new as of varnish 4/5
+     "vcl_purge"
+     "vcl_synth"
+     "vcl_backend_fetch"
+     "vcl_backend_response"
+     "vcl_backend_error"
+     "vcl_init"
+     "vcl_fini"
      )
     'font-lock-function-name-face)
 
@@ -103,12 +118,22 @@
      "deliver"
      "discard"
      "error"
+     "miss"
      "fetch"
      "hash"
      "keep"
      "lookup"
      "pass"
      "pipe"
+     "hit_for_pass"
+     ;; new as of varnish 4/5
+     "purge"
+     "synth"
+     "restart"
+     "abandon"
+     "retry"
+     "ok"
+     "fail"
      )
     'font-lock-function-name-face)
 
@@ -131,6 +156,7 @@
      "obj.valid"
      "req.backend"
      "req.hash"
+     "req.grace"
      "req.proto"
      "req.request"
      "req.url"
@@ -138,12 +164,93 @@
      "resp.response"
      "resp.status"
      "beresp.ttl"
+     "beresp.saintmode"
      "server.ip"
+     ;; new as of varnish 4/5
+     ;; hint: egrep ^[a-z] ./doc/sphinx/include/vcl_var.rs
+     "bereq"
+     "bereq.backend"
+     "bereq.between_bytes_timeout"
+     "bereq.connect_timeout"
+     "bereq.first_byte_timeout"
+     "bereq.method"
+     ;; "bereq.proto"
+     "bereq.retries"
+     "bereq.uncacheable"
+     ;; "bereq.url"
+     "bereq.xid"
+     "beresp"
+     "beresp.age"
+     "beresp.backend"
+     "beresp.backend.ip"
+     "beresp.backend.name"
+     "beresp.do_esi"
+     "beresp.do_gunzip"
+     "beresp.do_gzip"
+     "beresp.do_stream"
+     "beresp.grace"
+     ;; "beresp.http."
+     "beresp.keep"
+     "beresp.proto"
+     "beresp.reason"
+     "beresp.status"
+     "beresp.storage_hint"
+     ;; "beresp.ttl"
+     "beresp.uncacheable"
+     "beresp.was_304"
+     "client"
+     "client.identity"
+     ;; "client.ip"
+     "local"
+     "local.ip"
+     ;; "now"
+     "obj"
+     "obj.age"
+     "obj.grace"
+     "obj.hits"
+     ;; "obj.http."
+     "obj.keep"
+     ;; "obj.proto"
+     "obj.reason"
+     ;; "obj.status"
+     "obj.ttl"
+     "obj.uncacheable"
+     "remote"
+     "remote.ip"
+     "req"
+     "req.backend_hint"
+     "req.can_gzip"
+     "req.esi"
+     "req.esi_level"
+     "req.hash_always_miss"
+     "req.hash_ignore_busy"
+     ;; "req.http."
+     "req.method"
+     ;; "req.proto"
+     "req.restarts"
+     "req.ttl"
+     ;; "req.url"
+     "req.xid"
+     "req_top"
+     ;; "req_top.http."
+     "req_top.method"
+     "req_top.proto"
+     "req_top.url"
+     "resp"
+     ;; "resp.http."
+     "resp.is_streaming"
+     ;; "resp.proto"
+     "resp.reason"
+     ;; "resp.status"
+     "server"
+     "server.hostname"
+     "server.identity"
+     ;; "server.ip"
      )
     'font-lock-variable-name-face)
 
    ;; More variables
-   '("\\(bereq\\|beresp\\|req\\|resp\\|obj\\)\.http\.[A-Za-z-]+" .
+   '("\\(bereq\\|beresp\\|req\\|req_top\\|resp\\|obj\\)\.http\.[A-Za-z-]+\\|storage\.[A-Za-z0-9-]+\.\\(free_space\\|used_space\\|happy\\)" .
      font-lock-variable-name-face))
 
   ;; Filenames to highlight
@@ -168,6 +275,11 @@
   (modify-syntax-entry ?# "<")
   (modify-syntax-entry ?\n ">")
 
+  ;; long strings - handling as comments for now
+  (modify-syntax-entry ?{ ". 1")
+  (modify-syntax-entry ?\" "\". 23b")
+  (modify-syntax-entry ?} ". 4")
+
   (run-hooks 'vcl-mode-hook)
   (set (make-local-variable 'indent-line-function) 'vcl-indent-line)
   (setq indent-tabs-mode vcl-indent-tabs-mode)
@@ -189,23 +301,28 @@
   "Return the column to which the current line should be indented."
   (interactive)
   (save-excursion
-                                        ; Do not indent the first line.
-    (if (vcl-first-line-p) 0
-                                        ; Reduce indent level if we
-                                        ; close a block on this line
-      (if (vcl-closing-tag-on-this-line-p)
-          (- (vcl-previous-line-indentation)
-             vcl-indent-level)
-                                        ; Increase indent level if a
-                                        ; block opened on the previous
-                                        ; line
-        (if (vcl-opening-tag-on-previous-line-p)
-            (+ (vcl-previous-line-indentation)
-               vcl-indent-level)
-                                        ; By default, indent to the
-                                        ; level of the previous
-                                        ; non-empty line
-          (vcl-previous-line-indentation))))))
+    (cond
+     ;; Do not indent the first line.
+     ((vcl-first-line-p) 0)
+     ;; neither empty lines
+     ((vcl-empty-line-p) 0)
+     ;; Reduce indent level if we close a block on this line
+     ((vcl-closing-tag-on-this-line-p)
+      (- (vcl-previous-line-indentation)
+	 vcl-indent-level))
+     ;; Increase indent level if a block opened on the previous line
+     ((vcl-opening-tag-on-previous-line-p)
+      (+ (vcl-previous-line-indentation)
+	 vcl-indent-level))
+     ;; indent to the level of the previous non-empty line
+     ((or (vcl-previous-line-statement-end-p)
+	  (vcl-empty-previous-line-p)
+	  (vcl-comment-p))
+      (vcl-previous-line-indentation))
+     ;; line continuation
+     (t
+      (+ (vcl-previous-line-indentation)
+	 (floor (/ vcl-indent-level 2)))))))
 
 (defun vcl-opening-tag-on-previous-line-p ()
   "Checks if we have an opening tag on the previous line."
@@ -217,6 +334,17 @@
     (if (and (looking-at ".*{[ \t]*$")
              (not (vcl-comment-p)))
         t)))
+
+(defun vcl-previous-line-statement-end-p ()
+  "Checks if last line ended a statement"
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (skip-chars-backward " \t\n")
+    (beginning-of-line)
+    (or (looking-at ".*;[ \t]*$")
+	(looking-at ".*}C?[ \t]*$")
+	(vcl-comment-p))))
 
 (defun vcl-closing-tag-on-this-line-p ()
   "Checks if we have a closing tag on this line."
@@ -232,7 +360,9 @@
     (beginning-of-line)
     (skip-chars-backward " \t\n")
     (back-to-indentation)
-    (current-column)))
+    (- (current-column)
+       (mod (current-column)
+	    vcl-indent-level))))
 
 (defun vcl-comment-p ()
   "Checks if we have a commented line."
@@ -240,6 +370,22 @@
   (save-excursion
     (beginning-of-line)
     (looking-at "^[ \t]*#")))
+
+(defun vcl-empty-line-p ()
+  "Checks for empty line."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (looking-at "^[ \t]*$")))
+
+(defun vcl-empty-previous-line-p ()
+  "Checks for empty line."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (skip-chars-backward "\n")
+    (beginning-of-line)
+    (looking-at "^[ \t]*$")))
 
 (defun vcl-first-line-p ()
   "Checks if we are on the first line."
