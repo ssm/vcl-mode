@@ -314,10 +314,17 @@
      ((vcl-opening-tag-on-previous-line-p)
       (+ (vcl-previous-line-indentation)
 	 vcl-indent-level))
+     ;; for comments, check for c-scroll-style block
+     ((or (vcl-comment-p (point))
+	  (progn
+	    (save-excursion
+	      (back-to-indentation)
+	      (vcl-comment-p (point)))))
+      (+ (vcl-previous-line-indentation)
+	 (if (vcl-c-block-comment-p) 1 0)))
      ;; indent to the level of the previous non-empty line
      ((or (vcl-previous-line-statement-end-p)
-	  (vcl-empty-previous-line-p)
-	  (vcl-comment-p))
+	  (vcl-empty-previous-line-p))
       (vcl-previous-line-indentation))
      ;; line continuation
      (t
@@ -332,7 +339,7 @@
     (skip-chars-backward " \t\n")
     (beginning-of-line)
     (if (and (looking-at ".*{[ \t]*$")
-             (not (vcl-comment-p)))
+             (not (vcl-comment-p (point))))
         t)))
 
 (defun vcl-previous-line-statement-end-p ()
@@ -342,9 +349,7 @@
     (beginning-of-line)
     (skip-chars-backward " \t\n")
     (beginning-of-line)
-    (or (looking-at ".*;[ \t]*$")
-	(looking-at ".*}C?[ \t]*$")
-	(vcl-comment-p))))
+    (looking-at "^[ \t]*\\(#\\|//\\)\\|.*\\(;\\|}C?\\|\*/\\)[ \t]*$")))
 
 (defun vcl-closing-tag-on-this-line-p ()
   "Checks if we have a closing tag on this line."
@@ -364,12 +369,26 @@
        (mod (current-column)
 	    vcl-indent-level))))
 
-(defun vcl-comment-p ()
-  "Checks if we have a commented line."
+;; shamelessly copied from
+;; http://emacs.stackexchange.com/questions/14269/how-to-detect-if-the-point-is-within-a-comment-area
+(defun vcl-comment-p (pos)
+  (interactive)
+  (let ((fontfaces (get-text-property pos 'face)))
+    (when (not (listp fontfaces))
+      (setf fontfaces (list fontfaces)))
+    (delq nil
+	  (mapcar #'(lambda (f)
+		      ;; learn this trick from flyspell
+		      (or (eq f 'font-lock-comment-face)
+			  (eq f 'font-lock-comment-delimiter-face)))
+		  fontfaces))))
+
+(defun vcl-c-block-comment-p ()
+  "Checks if we have a c-block line starting with *"
   (interactive)
   (save-excursion
-    (beginning-of-line)
-    (looking-at "^[ \t]*#")))
+    (back-to-indentation)
+    (looking-at "\*")))
 
 (defun vcl-empty-line-p ()
   "Checks for empty line."
